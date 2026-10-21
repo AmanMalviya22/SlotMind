@@ -1,14 +1,16 @@
 package com.slotmind.service;
 
-import com.slotmind.entity.Provider;
 import com.slotmind.entity.Slot;
 import com.slotmind.enums.AppointmentStatus;
 import com.slotmind.enums.TriggerReason;
+import com.slotmind.event.WorkflowEvent;
 import com.slotmind.repository.AppointmentRepository;
 import com.slotmind.repository.SlotRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Async;
+import org.springframework.transaction.event.TransactionPhase;
+import org.springframework.transaction.event.TransactionalEventListener;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -24,14 +26,20 @@ public class WorkflowService {
         this.slots = slots;
     }
 
-    @Async
-    public void providerOffline(Provider provider) {
-        appointments.findByProviderAndStatus(provider, AppointmentStatus.CONFIRMED)
-                .forEach(appointment -> processSafely(appointment.getId(), TriggerReason.PROVIDER_OFFLINE,
-                        "provider-offline", provider.getId()));
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    public void onWorkflowEvent(WorkflowEvent event) {
+        if (event.reason() == TriggerReason.PROVIDER_OFFLINE) providerOffline(event.subjectId());
+        if (event.reason() == TriggerReason.SLOT_CANCELLED) slotCancelled(event.subjectId());
     }
 
-    @Async
+    @Async("workflowExecutor")
+    public void providerOffline(String providerId) {
+        appointments.findByProvider_IdAndStatus(providerId, AppointmentStatus.CONFIRMED)
+                .forEach(appointment -> processSafely(appointment.getId(), TriggerReason.PROVIDER_OFFLINE,
+                        "provider-offline", providerId));
+    }
+
+    @Async("workflowExecutor")
     public void slotCancelled(String slotId) {
         try {
             slots.findById(slotId)

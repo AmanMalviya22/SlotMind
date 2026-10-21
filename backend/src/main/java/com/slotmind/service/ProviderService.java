@@ -1,2 +1,34 @@
-package com.slotmind.service; import com.slotmind.entity.*; import com.slotmind.enums.*; import com.slotmind.exception.ApiExceptions.*; import com.slotmind.repository.*; import org.springframework.stereotype.Service; import org.springframework.transaction.annotation.Transactional; import java.util.*;
-@Service public class ProviderService { final ProviderRepository repo; final WorkflowService workflow; public ProviderService(ProviderRepository r,WorkflowService w){repo=r;workflow=w;} public List<Provider> list(){return repo.findAll();} public Provider status(String id,ProviderStatus s){Provider p=repo.findById(id).orElseThrow(()->new NotFound("Provider not found"));p.setStatus(s);Provider saved=repo.save(p);if(s==ProviderStatus.OFFLINE)workflow.providerOffline(saved);return saved;} }
+package com.slotmind.service;
+
+import com.slotmind.entity.Provider;
+import com.slotmind.enums.ProviderStatus;
+import com.slotmind.event.WorkflowEvent;
+import com.slotmind.exception.ApiExceptions.NotFound;
+import com.slotmind.repository.ProviderRepository;
+import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
+
+@Service
+public class ProviderService {
+    private final ProviderRepository repo;
+    private final ApplicationEventPublisher events;
+
+    public ProviderService(ProviderRepository repo, ApplicationEventPublisher events) {
+        this.repo = repo;
+        this.events = events;
+    }
+
+    public List<Provider> list() { return repo.findAll(); }
+
+    @Transactional
+    public Provider status(String id, ProviderStatus status) {
+        Provider provider = repo.lockById(id).orElseThrow(() -> new NotFound("Provider not found"));
+        provider.setStatus(status);
+        Provider saved = repo.save(provider);
+        if (status == ProviderStatus.OFFLINE) events.publishEvent(new WorkflowEvent(com.slotmind.enums.TriggerReason.PROVIDER_OFFLINE, saved.getId()));
+        return saved;
+    }
+}
