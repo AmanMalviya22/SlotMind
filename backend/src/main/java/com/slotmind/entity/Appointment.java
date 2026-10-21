@@ -1,0 +1,6 @@
+package com.slotmind.entity;
+import com.slotmind.enums.*; import jakarta.persistence.*; import java.time.Instant;
+@Entity
+public class Appointment { @Id private String id; @Column(nullable=false) private String patientName; @Enumerated(EnumType.STRING) private AppointmentType type; @ManyToOne(fetch=FetchType.EAGER,optional=false) private Provider provider; @ManyToOne(fetch=FetchType.EAGER,optional=false) private Slot slot; @Enumerated(EnumType.STRING) private AppointmentStatus status; private Instant createdAt; private Instant updatedAt; @Version private long version;
+ public Appointment(){} public Appointment(String id,String n,AppointmentType t,Provider p,Slot s,AppointmentStatus st,Instant c,Instant u,long v){this.id=id;patientName=n;type=t;provider=p;slot=s;status=st;createdAt=c;updatedAt=u;version=v;} public String getId(){return id;} public String getPatientName(){return patientName;} public AppointmentType getType(){return type;} public Provider getProvider(){return provider;} public Slot getSlot(){return slot;} public AppointmentStatus getStatus(){return status;} public void setStatus(AppointmentStatus s){status=s;} public void setSlot(Slot s){slot=s;} public void setProvider(Provider p){provider=p;}
+}

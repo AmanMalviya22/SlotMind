@@ -1,0 +1,2 @@
+package com.slotmind.config; import org.springframework.context.annotation.*; import org.springframework.web.servlet.config.annotation.*;
+@Configuration public class WebConfig implements WebMvcConfigurer { public void addCorsMappings(CorsRegistry r){r.addMapping("/**").allowedOrigins("http://localhost:5173").allowedMethods("GET","POST","PATCH","OPTIONS").allowedHeaders("*");} }
